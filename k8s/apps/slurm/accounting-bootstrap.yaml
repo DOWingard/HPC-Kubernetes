@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: slurm-accounting-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: slurm-accounting-bootstrap, app.kubernetes.io/part-of: hpclab}
+    spec:
+      restartPolicy: OnFailure
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      initContainers:
+        - name: munge
+          image: hpclab/slurm:0.1.0
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+          command: [/opt/hpc/bin/munge-entrypoint]
+          startupProbe:
+            exec: {command: [sh, -c, "munge -n | unmunge >/dev/null"]}
+            periodSeconds: 1
+            failureThreshold: 30
+          volumeMounts:
+            - {name: munge-key, mountPath: /etc/munge-secret, readOnly: true}
+            - {name: munge-run, mountPath: /run/munge}
+      containers:
+        - name: bootstrap
+          image: hpclab/slurm:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: [/opt/hpc/bin/accounting-bootstrap]
+          env:
+            - {name: CLUSTER_NAME, value: hpclab}
+          volumeMounts:
+            - {name: munge-run, mountPath: /run/munge}
+            - {name: slurm-config, mountPath: /etc/slurm, readOnly: true}
+            - {name: shared, mountPath: /shared}
+      volumes:
+        - name: munge-key
+          secret: {secretName: munge-key, defaultMode: 0400}
+        - name: munge-run
+          emptyDir: {}
+        - name: slurm-config
+          configMap: {name: slurm-config}
+        - name: shared
+          hostPath: {path: /shared, type: Directory}

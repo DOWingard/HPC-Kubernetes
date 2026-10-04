@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Renders slurmdbd.conf from a template at start-up so the database password
+# only ever exists in a Secret-backed env var and a 0600 file in the container.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+: "${SLURMDBD_DB_PASSWORD:?SLURMDBD_DB_PASSWORD must be set}"
+: "${STORAGE_HOST:?STORAGE_HOST must be set}"
+TEMPLATE=${SLURMDBD_TEMPLATE:-/etc/slurm-templates/slurmdbd.conf.tmpl}
+[[ -r $TEMPLATE ]] || die slurmdbd "template not found: $TEMPLATE"
+
+wait-for-munge 60
+
+export DBD_HOST=${HOSTNAME}
+install -d -o slurm -g slurm -m 0755 /etc/slurm /run/slurmdbd
+envsubst '${DBD_HOST} ${STORAGE_HOST} ${SLURMDBD_DB_PASSWORD}' <"$TEMPLATE" >/etc/slurm/slurmdbd.conf
+chown slurm:slurm /etc/slurm/slurmdbd.conf
+chmod 0600 /etc/slurm/slurmdbd.conf
+
+for ((i = 1; i <= 90; i++)); do
+  if (exec 3<>"/dev/tcp/${STORAGE_HOST}/3306") 2>/dev/null; then
+    log info slurmdbd "database ${STORAGE_HOST}:3306 reachable (after ${i} attempts)"
+    break
+  fi
+  ((i == 90)) && die slurmdbd "database ${STORAGE_HOST}:3306 unreachable after ${i} attempts"
+  ((i % 10 == 0)) && log warn slurmdbd "waiting for database ${STORAGE_HOST}:3306 (attempt ${i}/90)"
+  sleep 2
+done
+
+log info slurmdbd "starting slurmdbd (DbdHost=${DBD_HOST})"
+exec /usr/sbin/slurmdbd -D

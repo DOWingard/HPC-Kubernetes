@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Starts slurmd inside a Kubernetes pod that represents one CLOUD node.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+: "${SLURM_NODENAME:?SLURM_NODENAME must be set}"
+wait-for-munge 60
+
+# Privileged pods share the node's cgroup namespace, so /sys/fs/cgroup is the
+# node-wide tree and our own cgroup is the container's leaf under kubepods.
+# slurmd roots its hierarchy at dirname(cgroup of PID 1), so PID 1 is moved
+# into "<container>/init": the root then becomes the container's own cgroup and
+# every job cgroup stays inside the pod's CPU/memory limits. cgroup v2 forbids
+# processes in a cgroup whose controllers are delegated, hence the leaf.
+CG_MNT=/sys/fs/cgroup
+[[ -f $CG_MNT/cgroup.controllers ]] || die slurmd "cgroup v2 unified hierarchy not found at $CG_MNT"
+self_cg=$(sed -n 's/^0:://p' /proc/self/cgroup)
+[[ -n $self_cg && $self_cg != / ]] || die slurmd "unexpected cgroup path '$self_cg'; expected the container's cgroup"
+own="$CG_MNT$self_cg"
+mkdir -p "$own/init" "$own/system.slice"
+while read -r pid; do
+  echo "$pid" >"$own/init/cgroup.procs" 2>/dev/null || log warn slurmd "could not move pid $pid into $own/init"
+done <"$own/cgroup.procs"
+controllers=$(sed -E 's/(\S+)/+\1/g' "$own/cgroup.controllers")
+if ! echo "$controllers" >"$own/cgroup.subtree_control" 2>/tmp/cg.err; then
+  die slurmd "cannot delegate cgroup controllers ($controllers) in $own; is the pod privileged?" "$(cat /tmp/cg.err)"
+fi
+log info slurmd "cgroup root for slurm: $own (controllers: $(cat "$own/cgroup.subtree_control"))"
+
+install -d -o root -g root -m 0755 /var/spool/slurmd /run/slurm
+log info slurmd "starting slurmd as cloud node ${SLURM_NODENAME}"
+# Containers share the host kernel, so the boot time slurmd derives from uptime
+# predates the resume request and slurmctld would wait for a "reboot" forever.
+# -b makes slurmd report that it booted now.
+exec /usr/sbin/slurmd -D -b -N "$SLURM_NODENAME"

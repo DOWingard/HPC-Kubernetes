@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+wait-for-munge 60
+[[ -r /etc/slurm/slurm.conf ]] || die slurmctld "/etc/slurm/slurm.conf is missing"
+
+# With AccountingStorageEnforce set, slurmctld exits if slurmdbd is unreachable
+# at start-up, so wait for it rather than crash-looping.
+DBD_HOST=$(awk -F= '/^AccountingStorageHost/{print $2}' /etc/slurm/slurm.conf)
+DBD_PORT=$(awk -F= '/^AccountingStoragePort/{print $2}' /etc/slurm/slurm.conf)
+for ((i = 1; i <= 120; i++)); do
+  if (exec 3<>"/dev/tcp/${DBD_HOST}/${DBD_PORT:-6819}") 2>/dev/null; then
+    log info slurmctld "slurmdbd ${DBD_HOST}:${DBD_PORT:-6819} reachable (attempt $i)"
+    break
+  fi
+  ((i == 120)) && die slurmctld "slurmdbd ${DBD_HOST}:${DBD_PORT:-6819} unreachable after $i attempts"
+  ((i % 10 == 0)) && log warn slurmctld "waiting for slurmdbd ${DBD_HOST}:${DBD_PORT:-6819} (attempt $i/120)"
+  sleep 2
+done
+
+install -d -o slurm -g slurm -m 0755 /var/spool/slurmctld /var/log/slurm
+install -o slurm -g slurm -m 0644 /dev/null /var/log/slurm/power_save.log
+
+# Power-save hooks run detached from slurmctld's stdio; tailing their log file
+# into the container's stdout keeps burst scaling visible in `kubectl logs`.
+tail -n0 -F /var/log/slurm/power_save.log &
+
+log info slurmctld "starting slurmctld (cluster=$(awk -F= '/^ClusterName/{print $2}' /etc/slurm/slurm.conf))"
+exec /usr/sbin/slurmctld -D -i

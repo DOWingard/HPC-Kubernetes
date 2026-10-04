@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Runs munged as the pod's authentication sidecar. The key arrives via a Secret
+# volume owned by root; munged insists on owning its key, so it is re-installed
+# with munge ownership before the daemon starts.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+SRC=${MUNGE_KEY_FILE:-/etc/munge-secret/munge.key}
+[[ -s $SRC ]] || die munge "munge key not found or empty at $SRC; is the munge-key Secret mounted?"
+
+install -o munge -g munge -m 0400 "$SRC" /etc/munge/munge.key
+install -d -o munge -g munge -m 0755 /run/munge
+install -d -o munge -g munge -m 0700 /var/lib/munge /var/log/munge
+
+log info munge "starting munged"
+exec runuser -u munge -- /usr/sbin/munged --foreground --num-threads=4

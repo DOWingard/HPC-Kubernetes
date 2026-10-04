@@ -1,0 +1,62 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "__SLURM_NODE__",
+    "labels": {
+      "app.kubernetes.io/name": "slurmd-burst",
+      "app.kubernetes.io/part-of": "hpclab",
+      "hpclab.io/slurm-node": "__SLURM_NODE__"
+    }
+  },
+  "spec": {
+    "hostname": "__SLURM_NODE__",
+    "restartPolicy": "Always",
+    "terminationGracePeriodSeconds": 10,
+    "enableServiceLinks": false,
+    "automountServiceAccountToken": false,
+    "initContainers": [
+      {
+        "name": "munge",
+        "image": "hpclab/slurm:0.1.0",
+        "imagePullPolicy": "IfNotPresent",
+        "restartPolicy": "Always",
+        "command": ["/opt/hpc/bin/munge-entrypoint"],
+        "startupProbe": {
+          "exec": {"command": ["sh", "-c", "munge -n | unmunge >/dev/null"]},
+          "periodSeconds": 1,
+          "failureThreshold": 30
+        },
+        "resources": {"requests": {"cpu": "10m", "memory": "16Mi"}, "limits": {"memory": "64Mi"}},
+        "volumeMounts": [
+          {"name": "munge-key", "mountPath": "/etc/munge-secret", "readOnly": true},
+          {"name": "munge-run", "mountPath": "/run/munge"}
+        ]
+      }
+    ],
+    "containers": [
+      {
+        "name": "slurmd",
+        "image": "hpclab/slurm:0.1.0",
+        "imagePullPolicy": "IfNotPresent",
+        "command": ["/opt/hpc/bin/slurmd-burst-entrypoint"],
+        "env": [{"name": "SLURM_NODENAME", "value": "__SLURM_NODE__"}],
+        "securityContext": {"privileged": true},
+        "resources": {"requests": {"cpu": "2", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "1Gi"}},
+        "volumeMounts": [
+          {"name": "slurm-config", "mountPath": "/etc/slurm/slurm.conf", "subPath": "slurm.conf", "readOnly": true},
+          {"name": "slurm-burst", "mountPath": "/etc/slurm/cgroup.conf", "subPath": "cgroup-burst.conf", "readOnly": true},
+          {"name": "munge-run", "mountPath": "/run/munge"},
+          {"name": "shared", "mountPath": "/shared"}
+        ]
+      }
+    ],
+    "volumes": [
+      {"name": "munge-key", "secret": {"secretName": "munge-key", "defaultMode": 256}},
+      {"name": "munge-run", "emptyDir": {}},
+      {"name": "slurm-config", "configMap": {"name": "slurm-config"}},
+      {"name": "slurm-burst", "configMap": {"name": "slurm-burst"}},
+      {"name": "shared", "hostPath": {"path": "/shared", "type": "Directory"}}
+    ]
+  }
+}

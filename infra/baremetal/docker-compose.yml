@@ -1,0 +1,36 @@
+# The virtual bare-metal compute node. It joins the same Docker network as the
+# k3d cluster but lives outside Kubernetes, like a physical host in a rack.
+# Start it with scripts/up.sh, which supplies the variables below.
+name: hpclab-baremetal
+
+services:
+  bm-node-01:
+    image: hpclab/baremetal:0.1.0
+    container_name: bm-node-01
+    hostname: bm-node-01
+    # systemd as PID 1 and slurmd's cgroup v2 management need a writable
+    # cgroup tree, which Docker only grants to privileged containers.
+    privileged: true
+    cgroup: private
+    cpuset: "${BAREMETAL_CPUSET:-0-3}"
+    mem_limit: 2g
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    environment:
+      MUNGE_KEY_B64: ${MUNGE_KEY_B64:?MUNGE_KEY_B64 must be set (see .env)}
+    extra_hosts:
+      - "slurmctld:${SLURMCTLD_ADDR:?SLURMCTLD_ADDR must be set to the k3d server node IP}"
+    volumes:
+      - ${HPC_SHARED_DIR:?HPC_SHARED_DIR must be set}:/shared
+    networks:
+      hpc-net:
+        # Fixed address (outside the network's dynamic --ip-range) referenced
+        # as NodeAddr in slurm.conf.
+        ipv4_address: 172.28.0.200
+    restart: unless-stopped
+
+networks:
+  hpc-net:
+    external: true

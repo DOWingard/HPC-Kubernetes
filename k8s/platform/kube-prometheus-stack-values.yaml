@@ -1,0 +1,63 @@
+# kube-prometheus-stack sized for a single-node k3d lab.
+alertmanager:
+  enabled: false
+
+# k3s embeds these components in one process and does not expose their
+# metrics endpoints the way kubeadm clusters do.
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+
+prometheus-node-exporter:
+  # k3d nodes are containers whose / is not a shared mount; mounting it fails.
+  hostRootFsMount:
+    enabled: false
+
+prometheus:
+  service:
+    type: NodePort
+    nodePort: 30090
+  prometheusSpec:
+    retention: 2d
+    scrapeInterval: 15s
+    evaluationInterval: 30s
+    # Discover ServiceMonitors from every namespace, not only this release's.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 100m, memory: 300Mi}
+      limits: {memory: 1Gi}
+
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  service:
+    type: NodePort
+    nodePort: 30300
+  # Dashboards are viewable without logging in (the port is bound to
+  # 127.0.0.1 only); editing still requires the admin account.
+  grafana.ini:
+    auth.anonymous:
+      enabled: true
+      org_role: Viewer
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+  # Grafana's query fan-out for a full dashboard load peaks well above its
+  # idle footprint; 384Mi was observed to OOM-kill it.
+  resources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 768Mi}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 256Mi}

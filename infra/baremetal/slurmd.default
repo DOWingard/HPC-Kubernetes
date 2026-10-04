@@ -1,0 +1,3 @@
+# Configless mode: slurmd fetches slurm.conf and cgroup.conf from slurmctld at
+# start-up, so this node never carries a local copy that could drift.
+SLURMD_OPTIONS="--conf-server slurmctld:6817"

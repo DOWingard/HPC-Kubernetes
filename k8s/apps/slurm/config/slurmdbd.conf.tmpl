@@ -1,0 +1,17 @@
+# Rendered by slurmdbd-entrypoint at container start; ${...} values come from
+# the environment (the password from a Secret).
+AuthType=auth/munge
+DbdHost=${DBD_HOST}
+DbdPort=6819
+SlurmUser=slurm
+PidFile=/run/slurmdbd/slurmdbd.pid
+DebugLevel=info
+# slurmctld's PrivateData only covers live jobs; finished jobs are served by
+# slurmdbd, which enforces its own copy of the setting.
+PrivateData=jobs,usage
+StorageType=accounting_storage/mysql
+StorageHost=${STORAGE_HOST}
+StoragePort=3306
+StorageUser=slurm
+StoragePass=${SLURMDBD_DB_PASSWORD}
+StorageLoc=slurm_acct_db

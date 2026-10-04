@@ -1,0 +1,154 @@
+{
+ "jobs": [
+  {
+   "job_id": 5,
+   "name": "wrap",
+   "user_name": "alice",
+   "account": "physics",
+   "partition": "local-node",
+   "job_state": [
+    "PENDING"
+   ],
+   "state_reason": "Priority",
+   "nodes": "",
+   "cpus": {
+    "set": true,
+    "infinite": false,
+    "number": 1
+   },
+   "submit_time": {
+    "set": true,
+    "infinite": false,
+    "number": 1791080882
+   },
+   "start_time": {
+    "set": true,
+    "infinite": false,
+    "number": 0
+   },
+   "end_time": {
+    "set": true,
+    "infinite": false,
+    "number": 0
+   },
+   "exit_code": {
+    "status": [
+     "SUCCESS"
+    ],
+    "return_code": {
+     "set": true,
+     "infinite": false,
+     "number": 0
+    },
+    "signal": {
+     "id": {
+      "set": false,
+      "infinite": false,
+      "number": 0
+     },
+     "name": ""
+    }
+   }
+  },
+  {
+   "job_id": 6,
+   "name": "wrap",
+   "user_name": "bob",
+   "account": "chemistry",
+   "partition": "local-node",
+   "job_state": [
+    "RUNNING"
+   ],
+   "state_reason": "None",
+   "nodes": "bm-node-01",
+   "cpus": {
+    "set": true,
+    "infinite": false,
+    "number": 4
+   },
+   "submit_time": {
+    "set": true,
+    "infinite": false,
+    "number": 1791080882
+   },
+   "start_time": {
+    "set": true,
+    "infinite": false,
+    "number": 1791080882
+   },
+   "end_time": {
+    "set": true,
+    "infinite": false,
+    "number": 1791084482
+   },
+   "exit_code": {
+    "status": [
+     "SUCCESS"
+    ],
+    "return_code": {
+     "set": true,
+     "infinite": false,
+     "number": 0
+    },
+    "signal": {
+     "id": {
+      "set": false,
+      "infinite": false,
+      "number": 0
+     },
+     "name": ""
+    }
+   }
+  },
+  {
+   "job_id": 7,
+   "name": "wrap",
+   "user_name": "bob",
+   "account": "chemistry",
+   "partition": "local-node",
+   "job_state": [
+    "PENDING"
+   ],
+   "state_reason": "Resources",
+   "nodes": "",
+   "cpus": {
+    "set": true,
+    "infinite": false,
+    "number": 4
+   },
+   "submit_time": {
+    "set": true,
+    "infinite": false,
+    "number": 1791080882
+   },
+   "start_time": {
+    "set": true,
+    "infinite": false,
+    "number": 0
+   },
+   "end_time": {
+    "set": true,
+    "infinite": false,
+    "number": 0
+   },
+   "exit_code": {
+    "status": [
+     "SUCCESS"
+    ],
+    "return_code": {
+     "set": true,
+     "infinite": false,
+     "number": 0
+    },
+    "signal": {
+     "id": {
+      "set": false,
+      "infinite": false,
+      "number": 0
+     },
+     "name": ""
+    }
+   }
+  }
+ ]
+}

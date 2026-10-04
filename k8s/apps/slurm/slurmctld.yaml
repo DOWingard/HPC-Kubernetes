@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: slurmctld
+---
+# slurmctld's power-save hooks create and delete burst-node pods in this namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: slurm-burst-manager
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: slurm-burst-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: slurm-burst-manager
+subjects:
+  - kind: ServiceAccount
+    name: slurmctld
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmctld
+  labels: {app.kubernetes.io/name: slurmctld, app.kubernetes.io/part-of: hpclab}
+spec:
+  clusterIP: None
+  # Slurm daemons and clients resolve each other by this name, including
+  # the readiness probe itself, so the address must exist before readiness.
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: slurmctld}
+  ports:
+    - {name: slurmctld, port: 6817}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: slurmctld
+  labels: {app.kubernetes.io/name: slurmctld, app.kubernetes.io/part-of: hpclab}
+spec:
+  serviceName: slurmctld
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: slurmctld}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: slurmctld, app.kubernetes.io/part-of: hpclab}
+      annotations:
+        # Most slurm.conf edits apply live via `scontrol reconfigure`; bumping
+        # this value in Git forces a controller restart for those that do not.
+        hpclab.io/config-revision: "1"
+    spec:
+      serviceAccountName: slurmctld
+      enableServiceLinks: false
+      initContainers:
+        - name: munge
+          image: hpclab/slurm:0.1.0
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+          command: [/opt/hpc/bin/munge-entrypoint]
+          startupProbe:
+            exec: {command: [sh, -c, "munge -n | unmunge >/dev/null"]}
+            periodSeconds: 1
+            failureThreshold: 30
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+          volumeMounts:
+            - {name: munge-key, mountPath: /etc/munge-secret, readOnly: true}
+            - {name: munge-run, mountPath: /run/munge}
+      containers:
+        - name: slurmctld
+          image: hpclab/slurm:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: [/opt/hpc/bin/slurmctld-entrypoint]
+          ports:
+            # hostPort lets the bare-metal container (outside the pod network)
+            # reach the controller through the k3d node's Docker address.
+            - {name: slurmctld, containerPort: 6817, hostPort: 6817}
+          readinessProbe:
+            exec: {command: [scontrol, ping]}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # An RPC-level check; a bare TCP probe makes slurmctld log a
+          # "Zero Bytes were transmitted" error on every probe.
+          livenessProbe:
+            exec: {command: [scontrol, ping]}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 4
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          volumeMounts:
+            - {name: munge-run, mountPath: /run/munge}
+            - {name: slurm-config, mountPath: /etc/slurm, readOnly: true}
+            - {name: burst-template, mountPath: /etc/hpc/burst-pod.json, subPath: burst-pod.json, readOnly: true}
+            - {name: state, mountPath: /var/spool/slurmctld}
+      volumes:
+        - name: munge-key
+          secret: {secretName: munge-key, defaultMode: 0400}
+        - name: munge-run
+          emptyDir: {}
+        - name: slurm-config
+          configMap: {name: slurm-config}
+        - name: burst-template
+          configMap: {name: slurm-burst}
+  volumeClaimTemplates:
+    - metadata:
+        name: state
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: 1Gi}

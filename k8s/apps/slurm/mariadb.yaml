@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  labels: {app.kubernetes.io/name: mariadb, app.kubernetes.io/part-of: hpclab}
+spec:
+  clusterIP: None
+  selector: {app.kubernetes.io/name: mariadb}
+  ports:
+    - {name: mysql, port: 3306}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-tuning
+data:
+  slurm.cnf: |
+    [mysqld]
+    # Values recommended by the Slurm accounting docs, scaled down for a laptop.
+    innodb_buffer_pool_size=64M
+    innodb_log_file_size=32M
+    innodb_lock_wait_timeout=900
+    max_allowed_packet=16M
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  labels: {app.kubernetes.io/name: mariadb, app.kubernetes.io/part-of: hpclab}
+spec:
+  serviceName: mariadb
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: mariadb}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: mariadb, app.kubernetes.io/part-of: hpclab}
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:11.4
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: slurm-db, key: root-password}}
+            - name: MARIADB_PASSWORD
+              valueFrom: {secretKeyRef: {name: slurm-db, key: slurmdbd-password}}
+            - {name: MARIADB_USER, value: slurm}
+            - {name: MARIADB_DATABASE, value: slurm_acct_db}
+          ports:
+            - {name: mysql, containerPort: 3306}
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 384Mi}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/mysql}
+            - {name: tuning, mountPath: /etc/mysql/conf.d/slurm.cnf, subPath: slurm.cnf}
+      volumes:
+        - name: tuning
+          configMap: {name: mariadb-tuning}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: 2Gi}

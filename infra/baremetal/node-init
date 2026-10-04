@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# First-boot provisioning for the bare-metal node, run by hpc-node-init.service
+# before munge and slurmd. systemd does not hand the container's environment to
+# its units, so the munge key is read from PID 1's environment directly.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+key_b64=$(tr '\0' '\n' </proc/1/environ | sed -n 's/^MUNGE_KEY_B64=//p')
+[[ -n $key_b64 ]] || die node-init "MUNGE_KEY_B64 is not set in the container environment"
+
+tmp=$(mktemp)
+if ! base64 -d <<<"$key_b64" >"$tmp" 2>/dev/null || [[ $(stat -c %s "$tmp") -lt 32 ]]; then
+  rm -f "$tmp"
+  die node-init "MUNGE_KEY_B64 is not valid base64 or decodes to fewer than 32 bytes"
+fi
+install -o munge -g munge -m 0400 "$tmp" /etc/munge/munge.key
+rm -f "$tmp"
+log info node-init "munge key installed"
+
+if ! getent hosts slurmctld >/dev/null; then
+  die node-init "hostname 'slurmctld' does not resolve; start the node with scripts/up.sh (it injects the controller address)"
+fi
+log info node-init "controller address: $(getent hosts slurmctld | awk '{print $1}')"
+
+/opt/hpc/bin/shared-layout /shared
+log info node-init "node provisioning complete"

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Idempotently lays out the shared filesystem: private tenant homes, setgid
+# project directories per account group, and a sticky world-writable scratch.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+ROOT=${1:-/shared}
+[[ -d $ROOT ]] || die shared-layout "shared filesystem root $ROOT does not exist; is the volume mounted?"
+
+mkd() { install -d -o "$2" -g "$3" -m "$4" "$ROOT/$1"; }
+mkd home root root 0755
+mkd home/alice alice hpcusers 0700
+mkd home/bob bob hpcusers 0700
+mkd projects root root 0755
+mkd projects/physics root physics 2770
+mkd projects/chemistry root chemistry 2770
+mkd scratch root root 1777
+
+log info shared-layout "shared filesystem layout ensured under $ROOT"

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Blocks until the munge socket can mint and verify a credential.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+timeout_s=${1:-60}
+for ((i = 1; i <= timeout_s; i++)); do
+  if munge -n 2>/dev/null | unmunge >/dev/null 2>&1; then
+    log info munge "munge is ready (after ${i}s)"
+    exit 0
+  fi
+  ((i % 10 == 0)) && log warn munge "munge not ready yet (${i}s/${timeout_s}s)"
+  sleep 1
+done
+die munge "munge did not become ready within ${timeout_s}s"

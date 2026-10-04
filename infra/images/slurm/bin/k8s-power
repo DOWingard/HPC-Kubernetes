@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""Slurm power-saving hooks that back CLOUD nodes with Kubernetes pods.
+
+slurmctld invokes this as ResumeProgram / SuspendProgram / ResumeFailProgram
+with a hostlist expression (e.g. ``burst-[0-2]``). Resume creates one pod per
+node from a JSON pod template; suspend deletes those pods; resume-fail deletes
+them and returns the nodes to the powered-down pool so a transient failure
+(e.g. a slow image pull) does not leave them DOWN forever.
+Invoked via the ``k8s-resume`` / ``k8s-suspend`` / ``k8s-resume-fail`` symlinks,
+the mode comes from argv[0]; it can also be passed explicitly as
+``k8s-power <resume|suspend|resume-fail> <hostlist>``.
+
+Slurm learns a cloud node's address from whoever powers it up, so after the
+pods exist resume waits for each pod IP and records it with
+``scontrol update nodename=<node> nodeaddr=<ip>``.
+
+Only the Python standard library is used so the controller image stays small.
+"""
+
+import json
+import logging
+import os
+import ssl
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+import uuid
+
+API_SERVER = "https://kubernetes.default.svc"
+SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
+TEMPLATE_PATH = os.environ.get("BURST_POD_TEMPLATE", "/etc/hpc/burst-pod.json")
+LOG_PATH = os.environ.get("POWER_SAVE_LOG", "/var/log/slurm/power_save.log")
+PLACEHOLDER = "__SLURM_NODE__"
+MAX_ATTEMPTS = 4
+# Must stay below ResumeTimeout in slurm.conf.
+POD_IP_TIMEOUT_S = 120
+TRACE_ID = uuid.uuid4().hex[:12]
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        entry = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created))
+            + f".{int(record.msecs):03d}Z",
+            "level": record.levelname.lower(),
+            "context": record.name,
+            "message": record.getMessage(),
+            "trace_id": TRACE_ID,
+        }
+        if record.exc_info:
+            entry["error"] = repr(record.exc_info[1])
+            entry["stack"] = self.formatException(record.exc_info)
+        for key in ("node", "attempt", "status", "duration_ms"):
+            if hasattr(record, key):
+                entry[key] = getattr(record, key)
+        return json.dumps(entry)
+
+
+def setup_logging():
+    handlers = [logging.StreamHandler(sys.stderr)]
+    try:
+        handlers.append(logging.FileHandler(LOG_PATH))
+    except OSError as exc:
+        print(f"cannot open {LOG_PATH}: {exc}; logging to stderr only", file=sys.stderr)
+    for h in handlers:
+        h.setFormatter(JsonFormatter())
+    logging.basicConfig(level=logging.INFO, handlers=handlers)
+    return logging.getLogger("k8s-power")
+
+
+log = setup_logging()
+
+
+class KubeClient:
+    def __init__(self):
+        try:
+            with open(f"{SA_DIR}/token") as f:
+                self.token = f.read().strip()
+            with open(f"{SA_DIR}/namespace") as f:
+                self.namespace = f.read().strip()
+        except OSError:
+            log.exception("service account credentials unavailable; is automountServiceAccountToken enabled?")
+            raise
+        self.ctx = ssl.create_default_context(cafile=f"{SA_DIR}/ca.crt")
+
+    def request(self, method, path, body=None):
+        """Returns (status, parsed_body). Retries transport errors and 5xx with backoff."""
+        data = json.dumps(body).encode() if body is not None else None
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            req = urllib.request.Request(f"{API_SERVER}{path}", data=data, method=method)
+            req.add_header("Authorization", f"Bearer {self.token}")
+            req.add_header("Content-Type", "application/json")
+            start = time.monotonic()
+            try:
+                with urllib.request.urlopen(req, context=self.ctx, timeout=10) as resp:
+                    status, raw = resp.status, resp.read()
+            except urllib.error.HTTPError as exc:
+                status, raw = exc.code, exc.read()
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                if attempt == MAX_ATTEMPTS:
+                    log.error("kube api %s %s failed after %d attempts: %r", method, path, attempt, exc)
+                    raise
+                backoff = 2 ** attempt
+                log.warning("kube api %s %s transport error %r; retrying in %ss", method, path, exc, backoff,
+                            extra={"attempt": attempt})
+                time.sleep(backoff)
+                continue
+            duration = int((time.monotonic() - start) * 1000)
+            if status >= 500 and attempt < MAX_ATTEMPTS:
+                backoff = 2 ** attempt
+                log.warning("kube api %s %s returned %d; retrying in %ss", method, path, status, backoff,
+                            extra={"attempt": attempt, "status": status})
+                time.sleep(backoff)
+                continue
+            log.debug("kube api %s %s -> %d", method, path, status, extra={"status": status, "duration_ms": duration})
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except ValueError:
+                parsed = {"raw": raw[:500].decode(errors="replace")}
+            return status, parsed
+        raise RuntimeError("unreachable")
+
+    def pods_path(self, name=""):
+        return f"/api/v1/namespaces/{self.namespace}/pods" + (f"/{name}" if name else "")
+
+
+def expand_hostlist(expr):
+    try:
+        out = subprocess.run(["scontrol", "show", "hostnames", expr], check=True, capture_output=True,
+                             text=True, timeout=30).stdout
+    except subprocess.CalledProcessError as exc:
+        log.error("scontrol could not expand hostlist %r: %s", expr, exc.stderr.strip())
+        raise
+    return [h for h in out.split() if h]
+
+
+def render_pod(node):
+    try:
+        with open(TEMPLATE_PATH) as f:
+            template = f.read()
+    except OSError:
+        log.exception("burst pod template missing at %s", TEMPLATE_PATH)
+        raise
+    return json.loads(template.replace(PLACEHOLDER, node))
+
+
+def delete_pod(kube, node):
+    status, body = kube.request("DELETE", kube.pods_path(node), {"gracePeriodSeconds": 10})
+    if status in (200, 202):
+        log.info("deleted pod for node %s", node, extra={"node": node, "status": status})
+        return True
+    if status == 404:
+        log.info("pod for node %s already absent", node, extra={"node": node, "status": status})
+        return True
+    log.error("failed to delete pod for node %s: %s", node, body.get("message", body),
+              extra={"node": node, "status": status})
+    return False
+
+
+def wait_for_pod_ips(kube, nodes):
+    """Polls until every pod has an IP or the deadline passes. Returns {node: ip}."""
+    pending, found = set(nodes), {}
+    deadline = time.monotonic() + POD_IP_TIMEOUT_S
+    while pending and time.monotonic() < deadline:
+        for node in sorted(pending):
+            status, pod = kube.request("GET", kube.pods_path(node))
+            ip = pod.get("status", {}).get("podIP") if status == 200 else None
+            if ip:
+                found[node] = ip
+                pending.discard(node)
+        if pending:
+            time.sleep(1)
+    for node in sorted(pending):
+        log.error("pod for node %s got no IP within %ss", node, POD_IP_TIMEOUT_S, extra={"node": node})
+    return found
+
+
+def register_address(node, ip):
+    try:
+        subprocess.run(["scontrol", "update", f"nodename={node}", f"nodeaddr={ip}", f"nodehostname={node}"],
+                       check=True, capture_output=True, text=True, timeout=30)
+    except subprocess.CalledProcessError as exc:
+        log.error("scontrol could not set address of %s to %s: %s", node, ip, exc.stderr.strip(),
+                  extra={"node": node})
+        return False
+    log.info("registered node %s at %s", node, ip, extra={"node": node})
+    return True
+
+
+def resume_node(kube, node):
+    pod = render_pod(node)
+    status, body = kube.request("POST", kube.pods_path(), pod)
+    if status == 201:
+        log.info("created pod for node %s", node, extra={"node": node, "status": status})
+        return True
+    if status == 409:
+        # A pod left behind by a crashed or interrupted cycle would never re-register
+        # with slurmctld, so a terminal one is replaced; a live one is kept.
+        _, existing = kube.request("GET", kube.pods_path(node))
+        phase = existing.get("status", {}).get("phase")
+        if phase in ("Failed", "Succeeded"):
+            log.warning("replacing terminal pod for node %s (phase=%s)", node, phase, extra={"node": node})
+            delete_pod(kube, node)
+            for _ in range(15):
+                if kube.request("GET", kube.pods_path(node))[0] == 404:
+                    break
+                time.sleep(1)
+            status, body = kube.request("POST", kube.pods_path(), pod)
+            if status == 201:
+                log.info("recreated pod for node %s", node, extra={"node": node})
+                return True
+        else:
+            log.info("pod for node %s already exists (phase=%s)", node, phase, extra={"node": node})
+            return True
+    log.error("failed to create pod for node %s: %s", node, body.get("message", body),
+              extra={"node": node, "status": status})
+    return False
+
+
+def main(argv):
+    prog = os.path.basename(argv[0])
+    args = argv[1:]
+    modes = ("resume", "suspend", "resume-fail")
+    if prog.startswith("k8s-") and prog[4:] in modes:
+        mode = prog[4:]
+    elif args and args[0] in modes:
+        mode, args = args[0], args[1:]
+    else:
+        log.error("usage: k8s-power <resume|suspend|resume-fail> <hostlist>; got argv=%r", argv)
+        return 2
+    if len(args) != 1:
+        log.error("%s expects exactly one hostlist argument; got %r", mode, args)
+        return 2
+
+    start = time.monotonic()
+    nodes = expand_hostlist(args[0])
+    log.info("%s requested for %d node(s): %s", mode, len(nodes), args[0])
+    kube = KubeClient()
+    action = resume_node if mode == "resume" else delete_pod
+    failed = []
+    for node in nodes:
+        try:
+            if not action(kube, node):
+                failed.append(node)
+        except Exception:
+            log.exception("%s failed for node %s", mode, node, extra={"node": node})
+            failed.append(node)
+    if mode == "resume-fail" and not failed:
+        # Slurm marked these nodes DOWN; "resume" on a powered-down node returns it to idle~.
+        try:
+            subprocess.run(["scontrol", "update", f"nodename={args[0]}", "state=resume"],
+                           check=True, capture_output=True, text=True, timeout=30)
+            log.warning("nodes %s failed to boot; pods removed and nodes returned to the power-saving pool",
+                        args[0])
+        except subprocess.CalledProcessError as exc:
+            log.error("could not return %s to service: %s", args[0], exc.stderr.strip())
+            failed.extend(nodes)
+    if mode == "resume":
+        created = [n for n in nodes if n not in failed]
+        ips = wait_for_pod_ips(kube, created)
+        for node in created:
+            if node not in ips or not register_address(node, ips[node]):
+                failed.append(node)
+    duration = int((time.monotonic() - start) * 1000)
+    if failed:
+        log.error("%s finished with failures: %s", mode, ",".join(failed), extra={"duration_ms": duration})
+        return 1
+    log.info("%s completed for %s", mode, args[0], extra={"duration_ms": duration})
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

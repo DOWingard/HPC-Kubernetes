@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - servicemonitor.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    # Picked up by the Grafana dashboard sidecar from kube-prometheus-stack.
+    grafana_dashboard: "1"
+configMapGenerator:
+  - name: hpclab-dashboards
+    namespace: monitoring
+    files:
+      - dashboards/hpc-cpu-allocation.json

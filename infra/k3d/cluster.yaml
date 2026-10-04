@@ -1,0 +1,33 @@
+# k3d cluster definition. ${...} placeholders are filled by scripts/up.sh.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: hpclab
+servers: 1
+agents: 0
+image: ${K3S_IMAGE}
+# Shared with the bare-metal node so pods and the Docker container can reach
+# each other by IP.
+network: hpc-net
+volumes:
+  # Host directory standing in for the cluster's shared parallel filesystem.
+  - volume: ${HPC_SHARED_DIR}:/shared
+    nodeFilters: [server:0]
+ports:
+  - {port: "127.0.0.1:30080:30080", nodeFilters: ["server:0:direct"]}  # job portal API
+  - {port: "127.0.0.1:30300:30300", nodeFilters: ["server:0:direct"]}  # Grafana
+  - {port: "127.0.0.1:30090:30090", nodeFilters: ["server:0:direct"]}  # Prometheus
+  - {port: "127.0.0.1:30808:30808", nodeFilters: ["server:0:direct"]}  # Argo CD UI
+options:
+  k3d:
+    wait: true
+    timeout: 300s
+    disableLoadbalancer: true
+  k3s:
+    extraArgs:
+      - {arg: --disable=traefik, nodeFilters: ["server:*"]}
+      - {arg: --disable=servicelb, nodeFilters: ["server:*"]}
+  kubeconfig:
+    # The lab uses its own kubeconfig (.data/kubeconfig) and never touches ~/.kube/config.
+    updateDefaultKubeconfig: false
+    switchCurrentContext: false

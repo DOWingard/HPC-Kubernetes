@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Seeds slurmdbd with the cluster, accounts and tenant associations. Safe to
+# re-run: every object is checked before being added.
+set -euo pipefail
+source /opt/hpc/lib/log.sh
+
+CLUSTER=${CLUSTER_NAME:-hpclab}
+wait-for-munge 60
+
+for ((i = 1; i <= 60; i++)); do
+  if sacctmgr --noheader --parsable2 list cluster >/dev/null 2>/tmp/sacct.err; then
+    log info accounting "slurmdbd reachable (attempt $i)"
+    break
+  fi
+  ((i == 60)) && die accounting "slurmdbd unreachable after $i attempts" "$(cat /tmp/sacct.err)"
+  log warn accounting "slurmdbd not reachable yet (attempt $i/60), retrying in 5s" "$(head -c 300 /tmp/sacct.err)"
+  sleep 5
+done
+
+query() { sacctmgr --noheader --parsable2 list "$@" 2>/dev/null; }
+add() {
+  local what=$1; shift
+  sacctmgr --immediate add "$@" >/dev/null || die accounting "failed to add $what"
+  log info accounting "added $what"
+}
+
+[[ -n $(query cluster "$CLUSTER") ]] || add "cluster $CLUSTER" cluster "$CLUSTER"
+for acct in physics chemistry; do
+  [[ -n $(query account "$acct") ]] \
+    || add "account $acct" account "$acct" Description="$acct" Organization=science Cluster="$CLUSTER"
+done
+while IFS=: read -r user acct; do
+  [[ -n $(query assoc user="$user" account="$acct" cluster="$CLUSTER") ]] \
+    || add "user $user -> $acct" user "$user" Account="$acct" DefaultAccount="$acct" Cluster="$CLUSTER"
+done <<<$'alice:physics\nbob:chemistry'
+
+if [[ -d /shared ]]; then
+  shared-layout /shared
+fi
+
+log info accounting "associations: $(sacctmgr --noheader --parsable2 list assoc format=account,user | tr '\n' ' ')"

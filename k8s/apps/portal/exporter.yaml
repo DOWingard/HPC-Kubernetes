@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurm-exporter
+  labels: {app.kubernetes.io/name: slurm-exporter, app.kubernetes.io/part-of: hpclab}
+spec:
+  selector: {app.kubernetes.io/name: slurm-exporter}
+  ports:
+    - {name: metrics, port: 9341, targetPort: metrics}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slurm-exporter
+  labels: {app.kubernetes.io/name: slurm-exporter, app.kubernetes.io/part-of: hpclab}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: slurm-exporter}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: slurm-exporter, app.kubernetes.io/part-of: hpclab}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      initContainers:
+        - name: munge
+          image: hpclab/slurm:0.1.0
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+          command: [/opt/hpc/bin/munge-entrypoint]
+          startupProbe:
+            exec: {command: [sh, -c, "munge -n | unmunge >/dev/null"]}
+            periodSeconds: 1
+            failureThreshold: 30
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+          volumeMounts:
+            - {name: munge-key, mountPath: /etc/munge-secret, readOnly: true}
+            - {name: munge-run, mountPath: /run/munge}
+      containers:
+        - name: exporter
+          image: hpclab/portal:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: [python3, -m, hpc_portal.exporter]
+          env:
+            - {name: EXPORTER_INTERVAL, value: "10"}
+            - {name: LOG_LEVEL, value: info}
+          ports:
+            - {name: metrics, containerPort: 9341}
+          # Running as SlurmUser exempts the exporter from PrivateData, so it
+          # sees every tenant's jobs without needing root.
+          securityContext:
+            runAsUser: 981
+            runAsGroup: 981
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          readinessProbe:
+            httpGet: {path: /metrics, port: metrics}
+            periodSeconds: 15
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 192Mi}
+          volumeMounts:
+            - {name: munge-run, mountPath: /run/munge}
+            - {name: slurm-config, mountPath: /etc/slurm, readOnly: true}
+      volumes:
+        - name: munge-key
+          secret: {secretName: munge-key, defaultMode: 0400}
+        - name: munge-run
+          emptyDir: {}
+        - name: slurm-config
+          configMap: {name: slurm-config}

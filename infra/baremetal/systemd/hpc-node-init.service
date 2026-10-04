@@ -1,0 +1,12 @@
+[Unit]
+Description=HPC node provisioning (munge key, shared filesystem layout)
+After=local-fs.target
+Before=munge.service slurmd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/hpc/bin/node-init
+
+[Install]
+WantedBy=multi-user.target

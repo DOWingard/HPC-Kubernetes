@@ -1,0 +1,87 @@
+{
+ "nodes": [
+  {
+   "name": "bm-node-01",
+   "hostname": "bm-node-01",
+   "address": "172.28.0.200",
+   "partitions": [
+    "local-node"
+   ],
+   "state": [
+    "IDLE"
+   ],
+   "cpus": 4,
+   "alloc_cpus": 0,
+   "real_memory": 1800,
+   "alloc_memory": 0
+  },
+  {
+   "name": "burst-0",
+   "hostname": "burst-0",
+   "address": "burst-0",
+   "partitions": [
+    "k8s-burst"
+   ],
+   "state": [
+    "IDLE",
+    "CLOUD",
+    "NOT_RESPONDING",
+    "POWERED_DOWN"
+   ],
+   "cpus": 2,
+   "alloc_cpus": 0,
+   "real_memory": 900,
+   "alloc_memory": 0
+  },
+  {
+   "name": "burst-1",
+   "hostname": "burst-1",
+   "address": "burst-1",
+   "partitions": [
+    "k8s-burst"
+   ],
+   "state": [
+    "IDLE",
+    "CLOUD",
+    "POWERED_DOWN"
+   ],
+   "cpus": 2,
+   "alloc_cpus": 0,
+   "real_memory": 900,
+   "alloc_memory": 0
+  },
+  {
+   "name": "burst-2",
+   "hostname": "burst-2",
+   "address": "10.42.0.58",
+   "partitions": [
+    "k8s-burst"
+   ],
+   "state": [
+    "IDLE",
+    "CLOUD"
+   ],
+   "cpus": 2,
+   "alloc_cpus": 0,
+   "real_memory": 900,
+   "alloc_memory": 0
+  },
+  {
+   "name": "burst-3",
+   "hostname": "burst-3",
+   "address": "burst-3",
+   "partitions": [
+    "k8s-burst"
+   ],
+   "state": [
+    "IDLE",
+    "CLOUD",
+    "POWERED_DOWN"
+   ],
+   "cpus": 2,
+   "alloc_cpus": 0,
+   "real_memory": 900,
+   "alloc_memory": 0
+  }
+ ]
+}

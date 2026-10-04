@@ -1,0 +1,126 @@
+{
+ "jobs": [
+  {
+   "job_id": 1,
+   "name": "t-local-node",
+   "user": "alice",
+   "account": "physics",
+   "partition": "local-node",
+   "state": {
+    "current": [
+     "COMPLETED"
+    ],
+    "reason": "None"
+   },
+   "nodes": "bm-node-01",
+   "time": {
+    "elapsed": 6,
+    "eligible": 1791080155,
+    "end": 1791080161,
+    "planned": {
+     "set": true,
+     "infinite": false,
+     "number": 0
+    },
+    "start": 1791080155,
+    "submission": 1791080155,
+    "suspended": 0,
+    "system": {
+     "seconds": 0,
+     "microseconds": 17157
+    },
+    "limit": {
+     "set": true,
+     "infinite": false,
+     "number": 10
+    },
+    "total": {
+     "seconds": 0,
+     "microseconds": 19344
+    },
+    "user": {
+     "seconds": 0,
+     "microseconds": 2187
+    }
+   },
+   "exit_code": {
+    "status": [
+     "SUCCESS"
+    ],
+    "return_code": {
+     "set": true,
+     "infinite": false,
+     "number": 0
+    },
+    "signal": {
+     "id": {
+      "set": false,
+      "infinite": false,
+      "number": 0
+     },
+     "name": ""
+    }
+   },
+   "tres": {
+    "allocated": [
+     {
+      "type": "cpu",
+      "name": "",
+      "id": 1,
+      "count": 2
+     },
+     {
+      "type": "mem",
+      "name": "",
+      "id": 2,
+      "count": 256
+     },
+     {
+      "type": "energy",
+      "name": "",
+      "id": 3,
+      "count": -2
+     },
+     {
+      "type": "node",
+      "name": "",
+      "id": 4,
+      "count": 1
+     },
+     {
+      "type": "billing",
+      "name": "",
+      "id": 5,
+      "count": 2
+     }
+    ],
+    "requested": [
+     {
+      "type": "cpu",
+      "name": "",
+      "id": 1,
+      "count": 2
+     },
+     {
+      "type": "mem",
+      "name": "",
+      "id": 2,
+      "count": 256
+     },
+     {
+      "type": "node",
+      "name": "",
+      "id": 4,
+      "count": 1
+     },
+     {
+      "type": "billing",
+      "name": "",
+      "id": 5,
+      "count": 2
+     }
+    ]
+   }
+  }
+ ]
+}

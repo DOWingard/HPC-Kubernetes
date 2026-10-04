@@ -1,0 +1,24 @@
+# Argo CD trimmed to the components a single-user GitOps lab needs.
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  replicas: 1
+configs:
+  params:
+    # TLS is terminated nowhere on a laptop; serve the UI over plain HTTP.
+    server.insecure: true
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30808
+    nodePortHttps: 30809
+controller:
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+    limits: {memory: 768Mi}
+repoServer:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 384Mi}
