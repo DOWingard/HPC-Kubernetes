@@ -1,0 +1,205 @@
+docs/demo.cast
+  s_4a4d5737033e9d::t_157f80aee0e394 1-37
+infra/images/slurm/bin/munge-entrypoint
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-16
+k8s/apps/slurm/config/slurmdbd.conf.tmpl
+  s_4a4d5737033e9d::t_57056144523dce 9-11
+  s_4a4d5737033e9d::t_4347050c27a969 1-8,12-17
+k8s/apps/slurm/slurmdbd.yaml
+  s_4a4d5737033e9d::t_babec10a5fa277 1-7,11-76
+  s_4a4d5737033e9d::t_e4e1e55c02c65d 8-10
+k8s/apps/slurm/config/cgroup.conf
+  s_4a4d5737033e9d::t_4347050c27a969 1-7
+app/tests/test_api.py
+  s_4a4d5737033e9d::t_4bbb8fcf3f45cc 1-120
+k8s/apps/slurm/config/burst-pod.json
+  s_4a4d5737033e9d::t_babec10a5fa277 1-62
+k8s/argocd/applications/hpclab-observability.yaml
+  s_4a4d5737033e9d::t_a81090786b83fb 9
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-8,10-24
+scripts/reconfigure.sh
+  s_4a4d5737033e9d::t_3e77438ed90ccd 1-20
+app/tests/test_slurm_parse.py
+  s_4a4d5737033e9d::t_4bbb8fcf3f45cc 1-38
+infra/images/slurm/Dockerfile
+  s_4a4d5737033e9d::t_0375925fe4e897 1-4,6-23,25-32,34-36
+  s_4a4d5737033e9d::t_3487feea411651 5,24
+  s_4a4d5737033e9d::t_687517349ddfce 33
+infra/baremetal/slurmd.default
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-3
+infra/k3d/cluster.yaml
+  s_4a4d5737033e9d::t_a0966e845f6036 17,19
+  s_4a4d5737033e9d::t_3d8c35165a9e28 18,20
+  s_4a4d5737033e9d::t_36c33c7f7554ab 1-16,21-33
+infra/images/slurm/bin/slurmd-burst-entrypoint
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-8,27,29-31
+  s_4a4d5737033e9d::t_3487feea411651 9-26,28
+  s_4a4d5737033e9d::t_8cd1a601b56cc5 32-35
+infra/images/slurm/bin/shared-layout
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-19
+scripts/status.sh
+  s_4a4d5737033e9d::t_77af85b7ad4ac1 1-10,12-13,15-16,18-25
+  s_4a4d5737033e9d::t_49223a0c9b95e7 17
+  s_4a4d5737033e9d::t_3121a14673c8dc 11,14
+app/Dockerfile
+  s_4a4d5737033e9d::t_605180ae0b0a7a 1-22
+infra/baremetal/systemd/hpc-node-init.service
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-12
+app/tests/fixtures/nodes.json
+  s_4a4d5737033e9d::t_698454d35244b0 1-87
+infra/baremetal/docker-compose.yml
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-36
+scripts/down.sh
+  s_4a4d5737033e9d::t_e70612b85bff27 1-25
+app/hpc_portal/__init__.py
+  s_4a4d5737033e9d::t_d6514dd7293a7b 1-3
+app/hpc_portal/logging_setup.py
+  s_4a4d5737033e9d::t_d6514dd7293a7b 1-45
+scripts/init-env.sh
+  s_4a4d5737033e9d::t_6afa83ae3d52c1 1-29
+k8s/apps/portal/portal.yaml
+  s_4a4d5737033e9d::t_c3adc759a5b2a2 1-84
+app/tests/fixtures/squeue.json
+  s_4a4d5737033e9d::t_d3a218eebcf685 2-153
+  s_4a4d5737033e9d::t_698454d35244b0 1,154
+k8s/platform/argocd-values.yaml
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-24
+scripts/demo.sh
+  s_4a4d5737033e9d::t_2c9212774671e3 30,56,69
+  s_4a4d5737033e9d::t_77af85b7ad4ac1 1-29,31-55,57-68,70-73
+k8s/apps/observability/servicemonitor.yaml
+  s_4a4d5737033e9d::t_c3adc759a5b2a2 1-13
+app/tests/fixtures/sacct.json
+  s_4a4d5737033e9d::t_698454d35244b0 1-126
+app/tests/conftest.py
+  s_4a4d5737033e9d::t_4bbb8fcf3f45cc 1-17
+infra/baremetal/systemd/munge.service.d/10-hpc.conf
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-3
+k8s/apps/slurm/config/cgroup-burst.conf
+  s_4a4d5737033e9d::t_47d53a429c2303 2,6-10
+  s_4a4d5737033e9d::t_4347050c27a969 1,3-5,11-13
+k8s/apps/portal/kustomization.yaml
+  s_4a4d5737033e9d::t_c3adc759a5b2a2 1-6
+scripts/bootstrap-tools.sh
+  s_4a4d5737033e9d::t_6afa83ae3d52c1 1-49
+k8s/apps/slurm/slurmctld.yaml
+  s_4a4d5737033e9d::t_e4e1e55c02c65d 35-37,91-92,94,96-98
+  s_4a4d5737033e9d::t_b3924c0a8479bd 56-57
+  s_4a4d5737033e9d::t_babec10a5fa277 1-34,38-55,58-90,93,95,99-122
+k8s/apps/observability/dashboards/hpc-cpu-allocation.json
+  s_4a4d5737033e9d::t_ae72252951ab5c 1-924,926-934,936-944,946-991
+  s_4a4d5737033e9d::t_7f700c7e85b187 925,935,945
+app/hpc_portal/config.py
+  s_4a4d5737033e9d::t_d6514dd7293a7b 1-58
+k8s/apps/slurm/config/slurm.conf
+  s_4a4d5737033e9d::t_987d011c550419 11,29,60-62
+  s_4a4d5737033e9d::t_4347050c27a969 1-10,12-28,30-40,44-59,63-64,66-77
+  s_4a4d5737033e9d::t_57056144523dce 41-43
+  s_4a4d5737033e9d::t_687517349ddfce 65
+infra/baremetal/node-init
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-24,26
+  s_4a4d5737033e9d::t_f5660ba4a31d66 25
+k8s/apps/portal/exporter.yaml
+  s_4a4d5737033e9d::t_c3adc759a5b2a2 1-76
+scripts/up.sh
+  s_4a4d5737033e9d::t_3e77438ed90ccd 63-64,170
+  s_4a4d5737033e9d::t_9caa689bb1680c 1-9,11-48,56,71-169,171,173-186
+  s_4a4d5737033e9d::t_310c228ea22a77 10,49-55,57-62,65-70,172
+scripts/lib/log.sh
+  s_4a4d5737033e9d::t_41980c1835c8bb 36
+  s_4a4d5737033e9d::t_fc44f8cf6bbbca 1-35,37-41
+app/hpc_portal/api.py
+  s_4a4d5737033e9d::t_f450658a241aed 5
+  s_4a4d5737033e9d::t_d8a65371e0e627 1-4,6-96,102-131,140-165
+  s_4a4d5737033e9d::t_57056144523dce 132-139
+  s_4a4d5737033e9d::t_e4e1e55c02c65d 97-101
+infra/images/slurm/bin/slurmctld-entrypoint
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-7,22-30
+  s_4a4d5737033e9d::t_e4e1e55c02c65d 8-21
+app/tests/test_exporter.py
+  s_4a4d5737033e9d::t_4bbb8fcf3f45cc 1-54
+app/requirements-dev.txt
+  s_4a4d5737033e9d::t_6f5f2a5b75b0c9 3
+  s_4a4d5737033e9d::t_605180ae0b0a7a 1-2
+.dockerignore
+  s_4a4d5737033e9d::t_0375925fe4e897 1-8
+infra/baremetal/Dockerfile
+  s_4a4d5737033e9d::t_36c33c7f7554ab 9
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-8,10-29
+k8s/argocd/applications/hpclab-portal.yaml
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-8,10-24
+  s_4a4d5737033e9d::t_a81090786b83fb 9
+app/tests/test_config.py
+  s_4a4d5737033e9d::t_4bbb8fcf3f45cc 1-22
+app/requirements.txt
+  s_4a4d5737033e9d::t_605180ae0b0a7a 1-3
+infra/images/slurm/bin/accounting-bootstrap
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-19,25-26,36-41
+  s_4a4d5737033e9d::t_8f4eb075f5201b 20-24,27-35
+k8s/apps/slurm/namespace.yaml
+  s_4a4d5737033e9d::t_babec10a5fa277 1-6
+app/hpc_portal/exporter.py
+  s_4a4d5737033e9d::t_f450658a241aed 1-150
+k8s/apps/slurm/accounting-bootstrap.yaml
+  s_4a4d5737033e9d::t_babec10a5fa277 1-50
+k8s/apps/observability/kustomization.yaml
+  s_4a4d5737033e9d::t_c3adc759a5b2a2 1-14
+infra/baremetal/systemd/slurmd.service.d/10-hpc.conf
+  s_4a4d5737033e9d::t_dabd6e424ed233 1-10
+k8s/argocd/applications/hpclab-slurm.yaml
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-8,10-24
+  s_4a4d5737033e9d::t_a81090786b83fb 9
+scripts/gen-dashboard.py
+  s_4a4d5737033e9d::t_ae72252951ab5c 1-107,111,113-138
+  s_4a4d5737033e9d::t_7f700c7e85b187 108-110,112
+infra/images/slurm/bin/wait-for-munge
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-15
+k8s/apps/slurm/kustomization.yaml
+  s_4a4d5737033e9d::t_babec10a5fa277 1-24
+infra/images/slurm/bin/k8s-power
+  s_4a4d5737033e9d::t_687517349ddfce 6-11,225-228,231,250-259
+  s_4a4d5737033e9d::t_987d011c550419 13-16,37-38,160-189,260-265
+  s_4a4d5737033e9d::t_4bc91f6f1c8a9b 1-5,12,17-36,39-159,190-224,229-230,232-249,266-275
+app/hpc_portal/slurm.py
+  s_4a4d5737033e9d::t_e449cd826f5ce2 1-239
+scripts/build-images.sh
+  s_4a4d5737033e9d::t_36c33c7f7554ab 1-17
+infra/images/slurm/bin/slurmdbd-entrypoint
+  s_4a4d5737033e9d::t_ac84ef266fb833 1-31
+k8s/platform/kube-prometheus-stack-values.yaml
+  s_4a4d5737033e9d::t_2a32b6699d6c3b 54-55,57-58
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-40,47-53,56,59-63
+  s_4a4d5737033e9d::t_a0966e845f6036 41-46
+k8s/platform/versions.env
+  s_4a4d5737033e9d::t_875eb1c3072ff2 1-4
+scripts/lib/env.sh
+  s_4a4d5737033e9d::t_6afa83ae3d52c1 1-17
+scripts/lib/common.sh
+  s_4a4d5737033e9d::t_36c33c7f7554ab 1-31
+Makefile
+  s_4a4d5737033e9d::t_e70612b85bff27 1-5,7-33,37-48
+  s_4a4d5737033e9d::t_3e77438ed90ccd 6,34-36
+k8s/apps/slurm/mariadb.yaml
+  s_4a4d5737033e9d::t_babec10a5fa277 1-75
+README.md
+  s_4a4d5737033e9d::t_c1fbcce646f22b 1-15,17-245
+  s_4a4d5737033e9d::t_2ed60d16ee06ed 16
+.gitignore
+  s_4a4d5737033e9d::t_b61df00125a7e2 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5cc2b739ce25d54d91088523b7cf219ee5f13897",
+  "prompts": {},
+  "sessions": {
+    "s_4a4d5737033e9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1661d5ce-a75c-45bd-a9a2-8668ece6c89b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Derek Wingard <derekwingard@gmail.com>"
+    }
+  }
+}
